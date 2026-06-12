@@ -1,0 +1,13 @@
+{
+  "name": "smart-logistics",
+  "version": "1.0.0",
+  "description": "Smart Logistics & Shipment Tracking System",
+  "scripts": {
+    "dev": "cd server && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "seed": "cd server && npm run seed",
+    "db:migrate": "cd server && npm run db:migrate"
+  }
+}

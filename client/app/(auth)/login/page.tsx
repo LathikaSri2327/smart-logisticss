@@ -41,13 +41,6 @@ export default function LoginPage() {
         <p className="text-gray-500 text-sm mt-1">Sign in to Smart Logistics</p>
       </div>
 
-      <div className="bg-brand-50 dark:bg-brand-950/30 rounded-xl p-3 mb-6 text-xs text-brand-700 dark:text-brand-400 space-y-1">
-        <p className="font-semibold mb-1">Demo accounts:</p>
-        <p>Admin: admin@logistics.com / password123</p>
-        <p>Client: alice@techcorp.com / password123</p>
-        <p>Driver: david@logistics.com / password123</p>
-      </div>
-
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Email address" type="email" placeholder="you@company.com" value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })} icon={<Mail className="w-4 h-4" />} required />

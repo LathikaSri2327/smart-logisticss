@@ -1,14 +1,28 @@
 'use client';
 import { motion } from 'framer-motion';
-import { ClipboardList, MapPin, ArrowRight } from 'lucide-react';
+import { ClipboardList, MapPin, ArrowRight, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useFetch } from '@/hooks/useApi';
+import toast from 'react-hot-toast';
+import { useFetch, useApiMutation } from '@/hooks/useApi';
 import { Badge, EmptyState, Button } from '@/components/ui';
 import { formatDate } from '@/utils/helpers';
 
 export default function DriverDeliveriesPage() {
-  const { data, loading } = useFetch<any[]>('/shipments/driver');
+  const { data, loading, refetch } = useFetch<any[]>('/shipments/driver');
+  const { mutate, loading: mutating } = useApiMutation();
   const deliveries = data || [];
+
+  const handleAccept = (id: string) => {
+    mutate('patch', `/shipments/${id}`, { driverAcceptance: 'Accepted' },
+      () => { toast.success('Delivery accepted!'); refetch(); },
+      (e) => toast.error(e));
+  };
+
+  const handleReject = (id: string) => {
+    mutate('patch', `/shipments/${id}`, { driverAcceptance: 'Rejected' },
+      () => { toast.success('Delivery rejected'); refetch(); },
+      (e) => toast.error(e));
+  };
 
   return (
     <div className="space-y-6">
@@ -35,6 +49,13 @@ export default function DriverDeliveriesPage() {
                     <Badge label={d.shipmentStatus} dot />
                     <Badge label={d.priority} />
                     <Badge label={d.shipmentType} />
+                    {d.driverAcceptance && (
+                      <Badge 
+                        label={d.driverAcceptance} 
+                        dot 
+                        className={d.driverAcceptance === 'Accepted' ? 'bg-green-100 text-green-700' : d.driverAcceptance === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'} 
+                      />
+                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                     <div className="flex items-center gap-2">
@@ -72,19 +93,28 @@ export default function DriverDeliveriesPage() {
                       <p className="text-sm text-gray-700 dark:text-gray-300">{d.vehicle.vehicleNumber}</p>
                     </div>
                   )}
-                  <div className="flex gap-2">
-                    <Link href={`/driver/route?id=${d.id}`}>
-                      <Button variant="secondary" size="sm" icon={<MapPin className="w-4 h-4" />}>Route</Button>
-                    </Link>
-                    <Link href={`/driver/update?id=${d.id}`}>
-                      <Button size="sm" icon={<ArrowRight className="w-4 h-4" />}>Update</Button>
-                    </Link>
+                  <div className="flex gap-2 flex-wrap">
+                    {(!d.driverAcceptance || d.driverAcceptance === 'Pending') && (
+                      <>
+                        <Button size="sm" variant="secondary" icon={<CheckCircle className="w-4 h-4" />} onClick={() => handleAccept(d.id)} loading={mutating}>Accept</Button>
+                        <Button size="sm" variant="secondary" icon={<XCircle className="w-4 h-4" />} onClick={() => handleReject(d.id)} loading={mutating} className="bg-red-50 hover:bg-red-100 text-red-600">Reject</Button>
+                      </>
+                    )}
+                    {d.driverAcceptance === 'Accepted' && (
+                      <>
+                        <Link href={`/driver/route?id=${d.id}`}>
+                          <Button variant="secondary" size="sm" icon={<MapPin className="w-4 h-4" />}>Route</Button>
+                        </Link>
+                        <Link href={`/driver/update?id=${d.id}`}>
+                          <Button size="sm" icon={<ArrowRight className="w-4 h-4" />}>Update</Button>
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             </motion.div>
-          ))}
-        </div>
+          ))}\n        </div>
       )}
     </div>
   );

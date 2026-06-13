@@ -1,27 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import dbConnect from '@/lib/db';
+import { Vehicle } from '@/lib/models';
 import { getUser, mapUser } from '@/lib/middleware/auth';
 import { mapVehicle } from '@/lib/utils/shipment';
 
 const loadVehicle = async (id: string) => {
-  const { rows } = await pool.query('SELECT * FROM vehicles WHERE id=$1', [id]);
-  if (!rows[0]) return null;
-  const du = rows[0].driver_id ? await pool.query('SELECT * FROM users WHERE id=$1', [rows[0].driver_id]) : null;
-  return mapVehicle(rows[0], du?.rows[0] ? mapUser(du.rows[0]) : null);
+  const v = await Vehicle.findById(id).populate('driver').lean() as any;
+  return v ? mapVehicle(v, v.driver ? mapUser(v.driver) : null) : null;
 };
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const authUser = await getUser(req);
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const input = await req.json();
+  await dbConnect();
   try {
     if (input._action === 'location') {
-      await pool.query(
-        'UPDATE vehicles SET current_location=$1, updated_at=NOW() WHERE id=$2',
-        [JSON.stringify({ address: input.address, coordinates: { lat: input.lat, lng: input.lng } }), params.id]
-      );
+      await Vehicle.findByIdAndUpdate(params.id, { currentLocation: { address: input.address, coordinates: { lat: input.lat, lng: input.lng } } });
     } else {
-      await pool.query('UPDATE vehicles SET status=$1, updated_at=NOW() WHERE id=$2', [input.status, params.id]);
+      await Vehicle.findByIdAndUpdate(params.id, { status: input.status });
     }
     return NextResponse.json(await loadVehicle(params.id));
   } catch (e: any) {

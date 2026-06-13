@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
-import pool from '@/lib/db';
+import dbConnect from '@/lib/db';
+import { User } from '@/lib/models';
 
 export interface AuthUser {
   id: string;
@@ -14,20 +15,19 @@ export const getUser = async (req: Request): Promise<AuthUser | null> => {
   try {
     const bearer = token.startsWith('Bearer ') ? token.slice(7) : token;
     const decoded = jwt.verify(bearer, process.env.JWT_SECRET!) as { id: string };
-    const { rows } = await pool.query(
-      'SELECT id, name, email, role FROM users WHERE id = $1 AND is_active = true',
-      [decoded.id]
-    );
-    return rows[0] ?? null;
+    await dbConnect();
+    const user = await User.findOne({ _id: decoded.id, isActive: true }).lean() as any;
+    return user ? { id: user._id.toString(), name: user.name, email: user.email, role: user.role } : null;
   } catch {
     return null;
   }
 };
 
-export const mapUser = (r: any) =>
-  r ? {
-    id: r.id, name: r.name, email: r.email, role: r.role,
-    phone: r.phone, profileImage: r.profile_image, company: r.company,
-    address: r.address, isActive: r.is_active, lastLogin: r.last_login,
-    createdAt: r.created_at, updatedAt: r.updated_at,
+export const mapUser = (u: any) =>
+  u ? {
+    id: u._id?.toString() || u.id,
+    name: u.name, email: u.email, role: u.role,
+    phone: u.phone, profileImage: u.profileImage, company: u.company,
+    address: u.address, isActive: u.isActive, lastLogin: u.lastLogin,
+    createdAt: u.createdAt, updatedAt: u.updatedAt,
   } : null;

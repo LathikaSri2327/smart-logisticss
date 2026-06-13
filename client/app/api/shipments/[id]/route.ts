@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import dbConnect from '@/lib/db';
+import { Shipment, Notification } from '@/lib/models';
 import { getUser } from '@/lib/middleware/auth';
 import { loadShipment } from '@/lib/utils/shipment';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const authUser = await getUser(req);
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { id } = params;
-  // track by shipmentId string
+  await dbConnect();
   const action = req.nextUrl.searchParams.get('action');
   try {
     if (action === 'track') {
-      const { rows } = await pool.query('SELECT id FROM shipments WHERE shipment_id=$1', [id]);
-      return NextResponse.json(rows[0] ? await loadShipment(rows[0].id) : null);
+      const s = await Shipment.findOne({ shipmentId: params.id }).lean() as any;
+      return NextResponse.json(s ? await loadShipment(s._id.toString()) : null);
     }
-    return NextResponse.json(await loadShipment(id));
+    return NextResponse.json(await loadShipment(params.id));
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -23,66 +23,46 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const authUser = await getUser(req);
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { id } = params;
   const input = await req.json();
+  await dbConnect();
 
   try {
     const action = input._action;
 
     if (action === 'status') {
-      const { rows: sr } = await pool.query('SELECT * FROM shipments WHERE id=$1', [id]);
-      if (!sr[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-      const s = sr[0];
-      const history = [...(s.shipment_history || []), {
-        status: input.status, location: input.location || s.current_location?.address,
-        note: input.note, timestamp: new Date().toISOString(),
-      }];
-      await pool.query(
-        `UPDATE shipments SET shipment_status=$1, shipment_history=$2${input.status === 'Delivered' ? ', actual_delivery=NOW()' : ''}, updated_at=NOW() WHERE id=$3`,
-        [input.status, JSON.stringify(history), id]
-      );
-      await pool.query(
-        `INSERT INTO notifications (user_id,title,message,type,link) VALUES ($1,$2,$3,'shipment',$4)`,
-        [s.client_id, 'Shipment Update', `Your shipment ${s.shipment_id} is now ${input.status}.`, '/client/track']
-      );
-      return NextResponse.json(await loadShipment(id));
+      const s = await Shipment.findById(params.id).lean() as any;
+      if (!s) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      const history = [...(s.shipmentHistory || []), { status: input.status, location: input.location, note: input.note, timestamp: new Date().toISOString() }];
+      await Shipment.findByIdAndUpdate(params.id, {
+        shipmentStatus: input.status, shipmentHistory: history,
+        ...(input.status === 'Delivered' ? { actualDelivery: new Date() } : {}),
+      });
+      await Notification.create({ user: s.client, title: 'Shipment Update', message: `Your shipment ${s.shipmentId} is now ${input.status}.`, type: 'shipment', link: '/client/track' });
+      return NextResponse.json(await loadShipment(params.id));
     }
 
     if (action === 'assign') {
-      await pool.query(
-        `UPDATE shipments SET driver_id=$1, vehicle_id=$2, shipment_status='Packed', updated_at=NOW() WHERE id=$3`,
-        [input.driverId, input.vehicleId || null, id]
-      );
-      const { rows } = await pool.query('SELECT shipment_id FROM shipments WHERE id=$1', [id]);
-      await pool.query(
-        `INSERT INTO notifications (user_id,title,message,type) VALUES ($1,$2,$3,'delivery')`,
-        [input.driverId, 'New Delivery Assigned', `You have been assigned shipment ${rows[0]?.shipment_id}.`]
-      );
-      return NextResponse.json(await loadShipment(id));
+      const s = await Shipment.findByIdAndUpdate(params.id, { driver: input.driverId, vehicle: input.vehicleId || null, shipmentStatus: 'Packed' }, { new: true }).lean() as any;
+      await Notification.create({ user: input.driverId, title: 'New Delivery Assigned', message: `You have been assigned shipment ${s?.shipmentId}.`, type: 'delivery' });
+      return NextResponse.json(await loadShipment(params.id));
     }
 
     if (action === 'proof') {
-      await pool.query(
-        `UPDATE shipments SET proof_of_delivery=$1, shipment_status='Delivered', actual_delivery=NOW(), updated_at=NOW() WHERE id=$2`,
-        [input.imageUrl, id]
-      );
-      return NextResponse.json(await loadShipment(id));
+      await Shipment.findByIdAndUpdate(params.id, { proofOfDelivery: input.imageUrl, shipmentStatus: 'Delivered', actualDelivery: new Date() });
+      return NextResponse.json(await loadShipment(params.id));
     }
 
-    // generic update
-    const sets: string[] = ['updated_at=NOW()'];
-    const p: any[] = [];
-    let i = 1;
-    if (input.driverId !== undefined) { sets.push(`driver_id=$${i++}`); p.push(input.driverId); }
-    if (input.vehicleId !== undefined) { sets.push(`vehicle_id=$${i++}`); p.push(input.vehicleId); }
-    if (input.shipmentStatus) { sets.push(`shipment_status=$${i++}`); p.push(input.shipmentStatus); }
-    if (input.currentLocation) { sets.push(`current_location=$${i++}`); p.push(JSON.stringify(input.currentLocation)); }
-    if (input.estimatedDelivery) { sets.push(`estimated_delivery=$${i++}`); p.push(input.estimatedDelivery); }
-    if (input.notes) { sets.push(`notes=$${i++}`); p.push(input.notes); }
-    if (input.priority) { sets.push(`priority=$${i++}`); p.push(input.priority); }
-    p.push(id);
-    await pool.query(`UPDATE shipments SET ${sets.join(',')} WHERE id=$${i}`, p);
-    return NextResponse.json(await loadShipment(id));
+    const update: any = {};
+    if (input.driverId !== undefined) update.driver = input.driverId;
+    if (input.vehicleId !== undefined) update.vehicle = input.vehicleId;
+    if (input.shipmentStatus) update.shipmentStatus = input.shipmentStatus;
+    if (input.currentLocation) update.currentLocation = input.currentLocation;
+    if (input.estimatedDelivery) update.estimatedDelivery = input.estimatedDelivery;
+    if (input.notes) update.notes = input.notes;
+    if (input.priority) update.priority = input.priority;
+    if (input.driverAcceptance) update.driverAcceptance = input.driverAcceptance;
+    await Shipment.findByIdAndUpdate(params.id, update);
+    return NextResponse.json(await loadShipment(params.id));
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -92,8 +72,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const authUser = await getUser(req);
   if (!authUser || authUser.role !== 'admin')
     return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+  await dbConnect();
   try {
-    await pool.query('DELETE FROM shipments WHERE id=$1', [params.id]);
+    await Shipment.findByIdAndDelete(params.id);
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

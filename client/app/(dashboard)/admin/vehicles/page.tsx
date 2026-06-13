@@ -10,7 +10,7 @@ import { VehicleStatus } from '@/types';
 
 const VEHICLE_TYPES = ['Truck', 'Van', 'Motorcycle', 'Ship', 'Plane'];
 const FUEL_TYPES = ['Diesel', 'Petrol', 'Electric', 'Hybrid'];
-const STATUSES: VehicleStatus[] = ['Available', 'In Use', 'Maintenance', 'Inactive'];
+const STATUSES: VehicleStatus[] = ['Available', 'InUse', 'Maintenance', 'Inactive'];
 
 export default function AdminVehiclesPage() {
   const [showAdd, setShowAdd] = useState(false);

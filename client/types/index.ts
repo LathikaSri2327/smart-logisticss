@@ -1,10 +1,10 @@
 export type Role = 'admin' | 'client' | 'driver';
-export type ShipmentStatus = 'Pending' | 'Packed' | 'In Transit' | 'Customs Clearance' | 'Out for Delivery' | 'Delivered' | 'Cancelled';
-export type ShipmentType = 'Standard' | 'Express' | 'Freight' | 'Cold Chain';
+export type ShipmentStatus = 'Pending' | 'Packed' | 'InTransit' | 'CustomsClearance' | 'OutForDelivery' | 'Delivered' | 'Cancelled';
+export type ShipmentType = 'Standard' | 'Express' | 'Freight' | 'ColdChain';
 export type Priority = 'Low' | 'Normal' | 'High' | 'Urgent';
-export type VehicleStatus = 'Available' | 'In Use' | 'Maintenance' | 'Inactive';
+export type VehicleStatus = 'Available' | 'InUse' | 'Maintenance' | 'Inactive';
 export type PaymentStatus = 'Pending' | 'Paid' | 'Overdue' | 'Refunded';
-export type InventoryStatus = 'Normal' | 'Low Stock' | 'Overstocked' | 'Critical';
+export type InventoryStatus = 'Normal' | 'LowStock' | 'Overstocked' | 'Critical';
 
 export interface Coordinates { lat: number; lng: number; }
 export interface Location { address?: string; city?: string; country?: string; coordinates?: Coordinates; }

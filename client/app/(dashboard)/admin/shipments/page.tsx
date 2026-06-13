@@ -8,7 +8,7 @@ import { Button, Badge, Modal, Input, Select, SearchBar, Table, Pagination, Empt
 import { formatDate, formatCurrency, generateCSV } from '@/utils/helpers';
 import { Shipment, ShipmentStatus } from '@/types';
 
-const STATUSES: ShipmentStatus[] = ['Pending', 'Packed', 'In Transit', 'Customs Clearance', 'Out for Delivery', 'Delivered', 'Cancelled'];
+const STATUSES: ShipmentStatus[] = ['Pending', 'Packed', 'InTransit', 'CustomsClearance', 'OutForDelivery', 'Delivered', 'Cancelled'];
 
 export default function AdminShipmentsPage() {
   const [page, setPage] = useState(1);
@@ -93,7 +93,7 @@ export default function AdminShipmentsPage() {
       </div>
 
       <div className="card overflow-hidden">
-        <Table headers={['Shipment ID', 'Client', 'Route', 'Status', 'Type', 'Value', 'ETA', 'Actions']} loading={loading}>
+        <Table headers={['Shipment ID', 'Client', 'Route', 'Status', 'Driver', 'Value', 'ETA', 'Actions']} loading={loading}>
           {shipments.length === 0 && !loading ? (
             <tr><td colSpan={8} className="text-center py-12 text-gray-500">No shipments found</td></tr>
           ) : shipments.map((s, i) => (
@@ -108,7 +108,14 @@ export default function AdminShipmentsPage() {
                 <span>{s.source?.city}</span><span className="mx-1 text-gray-400">→</span><span>{s.destination?.city}</span>
               </td>
               <td className="px-4 py-3"><Badge label={s.shipmentStatus} dot /></td>
-              <td className="px-4 py-3"><Badge label={s.shipmentType} /></td>
+              <td className="px-4 py-3">
+                {s.driver ? (
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{s.driver.name}</p>
+                    <p className="text-xs text-gray-500">{(s as any).driverAcceptance || 'Pending'}</p>
+                  </div>
+                ) : <span className="text-xs text-gray-400">Unassigned</span>}
+              </td>
               <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{formatCurrency(s.value)}</td>
               <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{formatDate(s.estimatedDelivery)}</td>
               <td className="px-4 py-3">

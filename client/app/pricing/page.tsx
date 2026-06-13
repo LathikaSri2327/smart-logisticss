@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, Truck } from 'lucide-react';
 
 const plans = [
-  { name: 'Starter', price: 49, desc: 'For small businesses getting started', features: ['Up to 500 shipments/month', '2 admin users', 'Basic analytics', 'Email support', 'Client portal'], highlight: false },
-  { name: 'Professional', price: 149, desc: 'For growing logistics companies', features: ['Up to 5,000 shipments/month', '10 admin users', 'Advanced analytics & AI insights', 'Priority support', 'Client & driver portals', 'Warehouse management', 'QR code generation'], highlight: true },
-  { name: 'Enterprise', price: 499, desc: 'For large-scale operations', features: ['Unlimited shipments', 'Unlimited users', 'Full analytics suite', 'Dedicated support', 'All portals', 'Full warehouse management', 'Custom integrations', 'SLA guarantee'], highlight: false },
+  { name: 'Starter', price: 4099, desc: 'For small businesses getting started', features: ['Up to 500 shipments/month', '2 admin users', 'Basic analytics', 'Email support', 'Client portal'], highlight: false },
+  { name: 'Professional', price: 12499, desc: 'For growing logistics companies', features: ['Up to 5,000 shipments/month', '10 admin users', 'Advanced analytics & AI insights', 'Priority support', 'Client & driver portals', 'Warehouse management', 'QR code generation'], highlight: true },
+  { name: 'Enterprise', price: 41499, desc: 'For large-scale operations', features: ['Unlimited shipments', 'Unlimited users', 'Full analytics suite', 'Dedicated support', 'All portals', 'Full warehouse management', 'Custom integrations', 'SLA guarantee'], highlight: false },
 ];
 
 export default function PricingPage() {
@@ -34,7 +34,7 @@ export default function PricingPage() {
               {plan.highlight && <div className="bg-brand-600 text-white text-xs font-bold px-3 py-1 rounded-full inline-block mb-4">Most Popular</div>}
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{plan.name}</h3>
               <p className="text-gray-500 text-sm mb-4">{plan.desc}</p>
-              <div className="mb-6"><span className="text-4xl font-black text-gray-900 dark:text-white">${plan.price}</span><span className="text-gray-500">/mo</span></div>
+              <div className="mb-6"><span className="text-4xl font-black text-gray-900 dark:text-white">₹{plan.price.toLocaleString('en-IN')}</span><span className="text-gray-500">/mo</span></div>
               <ul className="space-y-2 mb-8">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
